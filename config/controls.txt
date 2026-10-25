@@ -1,0 +1,63 @@
+# Keyboard and mouse controls. Edit and restart the game; no rebuild needed.
+#
+# A gamepad also works, plugged in at any time, with a fixed layout: bottom face button A
+# (jump), right B (spin), left X (bash), top Y, triggers L and R, shoulder buttons and
+# back/select Z, right stick camera. Whichever you touched last decides the camera: after the
+# keyboard or mouse it follows the mouse at a fixed distance from the character; after a
+# gamepad it behaves as in the original game.
+#
+# Each line is   input = controller action
+#
+# Inputs:  a letter or digit, Space, Tab, Escape, Enter, Shift, Ctrl, Alt, Backspace,
+#          ArrowUp / ArrowDown / ArrowLeft / ArrowRight, F1..F12,
+#          MouseLeft, MouseRight, MouseMiddle
+# Actions: the GameCube buttons  a b x y z l r start
+#          stick_up stick_down stick_left stick_right      (control stick: movement)
+#          c_up c_down c_left c_right                      (C-stick: camera)
+#          dpad_up dpad_down dpad_left dpad_right
+#          look_up look_down look_left look_right          (turn the camera like the mouse)
+#
+# Several inputs may map to the same action.
+#
+# A line that starts with "driving" applies only while driving a car, where it replaces
+# what that input does otherwise.
+#
+# F11 and Alt+Enter switch between the window and full screen; they cannot be rebound here.
+
+# Movement
+W = stick_up
+S = stick_down
+A = stick_left
+D = stick_right
+
+# Actions
+Space      = a        # jump
+MouseLeft  = b        # spin
+MouseRight = x        # bash
+F          = r        # Sonic Wave Guitar
+E          = y
+Q          = l
+Tab        = z        # upgrade menu
+Escape     = start    # pause
+Enter      = start
+
+# Driving: steer with A and D
+driving W         = a   # accelerate
+driving S         = b   # brake and reverse
+driving MouseLeft = r   # boost
+
+# Camera on the keyboard, in addition to the mouse
+ArrowUp    = look_up
+ArrowDown  = look_down
+ArrowLeft  = look_left
+ArrowRight = look_right
+
+# Mouse look turns the camera directly while a level is running; the cursor is free in
+# menus and on the pause screen. Sensitivity 1.0 is the default speed; 2.0 is twice as fast.
+mouse_sensitivity = 1.0
+invert_y = no
+
+# Some levels tilt the camera down by themselves near drops and on steep slides, by up to
+# 60 degrees. This is how much of that tilt is applied, with the mouse or a gamepad: 1.0 is
+# the original game, 0 leaves the camera alone.
+camera_level_tilt = 0.35

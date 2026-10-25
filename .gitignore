@@ -1,0 +1,25 @@
+# Game data never goes in the repo
+game_port/
+disc/
+*.iso
+*.dol
+*.elf
+
+# Build output
+target/
+/generated/
+crates/game/src/gen/
+screenshots/
+saves/
+*.gcm
+cache/
+saves-backup-*/
+dist/
+TSSM-Builder.zip
+
+# This machine's settings (the game has defaults without them)
+config/fps.txt
+config/fov.txt
+
+# Session transcripts
+2026-*.txt

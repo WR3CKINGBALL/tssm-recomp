@@ -1,0 +1,4 @@
+# MSVC is the standard, best-tested Windows target for the graphics stack (wgpu, winit).
+# It needs the Windows SDK and the Visual Studio C++ build tools.
+[toolchain]
+channel = "stable-x86_64-pc-windows-msvc"

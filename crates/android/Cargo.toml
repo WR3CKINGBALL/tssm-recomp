@@ -1,0 +1,14 @@
+[package]
+name = "tssm-android"
+version = "0.1.0"
+edition = "2021"
+
+# The Android package: a shared library the system's NativeActivity loads. Everything lives in
+# the tssm crate; this one only exists so the desktop build does not have to link a second,
+# shared copy of the game. tools/android.ps1 builds it, wraps it in an APK with
+# AndroidManifest.xml and installs it.
+[lib]
+crate-type = ["cdylib"]
+
+[target.'cfg(target_os = "android")'.dependencies]
+tssm = { path = "../tssm" }

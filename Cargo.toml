@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = ["crates/recomp", "crates/runtime", "crates/game", "crates/tssm", "crates/android"]
+
+# The generated crate is ~1M lines; keep it debuggable but not glacial.
+[profile.dev]
+opt-level = 1
+debug = "line-tables-only"
+
+[profile.release]
+debug = "line-tables-only"
+
+# The host decodes and lights every vertex on the CPU; that code needs full optimization.
+[profile.dev.package.tssm]
+opt-level = 3

@@ -1,0 +1,89 @@
+# Dolphin SDK functions the native runtime may replace instead of running the
+# recompiled original. One entry per line:
+#   PREFIX   matches unmangled C names PREFIX[A-Z_0-9]..., with optional leading underscores
+#   =name    matches one exact symbol name
+# Listing a function here only makes it replaceable; crates/runtime/src/hle.rs decides
+# whether each one runs native code or the recompiled original.
+
+GX
+OS
+DVD
+PAD
+SI
+VI
+AX
+AI
+DSP
+AR
+CARD
+EXI
+DB
+MIX
+PPC
+TRK
+# CPU cache control (data, instruction, locked, L2)
+DC
+IC
+LC
+L2
+
+# Game functions hooked for mouse look (see crates/tssm/src/camera.rs)
+=zCameraUpdate__FP7xCameraf
+=xCameraMove__FP7xCameraUiffffff
+=xCameraLookYPR__FP7xCameraUiffffff
+
+# Movies: any button skips one that can be skipped (see crates/tssm/src/menu.rs)
+=iFMVPlay__FPCcUifUibbi
+=BinkDoFrame
+
+# The car's update: stepped at a fixed rate (see crates/tssm/src/car.rs), and it tells
+# when a car is being driven (see crates/tssm/src/input.rs)
+=CarUpdate__4zCarFffbbb
+
+# Levels' own camera tilts, scaled down (see crates/tssm/src/camera.rs)
+=zCameraTweakGlobal_Add__FUiffff
+
+# RenderWare's camera field of view, widened for wide windows (see crates/tssm/src/aspect.rs)
+=RwCameraSetViewWindow
+=RwCameraBeginUpdate
+
+# The heads-up display's widgets, marked so they can go to the edges of a wide picture, and
+# the call that follows the display's drawing (see crates/tssm/src/hle.rs)
+=render__Q24xhud11text_widgetFv
+=render__Q24xhud12image_widgetFv
+=render__Q24xhud12model_widgetFv
+=render__Q24xhud17font_meter_widgetFv
+=render__Q24xhud17unit_meter_widgetFv
+=zGameModeGet__Fv
+
+# Level loads: logged, and redirected by TSSM_BOOT (see crates/tssm/src/dvd.rs)
+=zSceneInit__FUii
+=_rwDlRasterShowRaster
+# RenderWare's wait for the frames submitted so far, done asleep (see crates/tssm/src/hle.rs)
+=RwGameCubeGetXFBs
+
+# The save and load menus, to skip their memory card slot screen (see crates/tssm/src/card.rs)
+=zSaveLoad_SaveLoop__Fv
+=zSaveLoad_LoadLoop__Fv
+=zSaveLoad_Tick__Fb
+# The start-up check for room on the card, which three save files fail (see card.rs)
+=iSGTgtHaveRoomStartup__FP13st_ISGSESSIONiiPCcPCcPiPiPi
+
+# The menus' update, for the mouse (see crates/tssm/src/menu.rs)
+=zUIMgrUpdate__Ff
+=DoRender__7zUITextCFv
+=DoRender__8zUIModelCFv
+=DoRender__8zUIImageCFv
+
+=__start
+=__init_registers
+=__init_data
+=__init_hardware
+=__flush_cache
+=__init_user
+=__fini_cpp
+=exit
+=_ExitProcess
+=InitMetroTRK
+=InitMetroTRK_BBA
+=EnableMetroTRKInterrupts
