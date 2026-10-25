@@ -5,6 +5,17 @@ Newest entries first. There is no git history yet, so this file is the record.
 
 ## 2026-10-25
 
+### The exe has the game's SpongeBob as its icon
+- The user asked for a picture from the game as the exe's icon. The memory card icon
+  (files\SBGCIcon.tpl) was too small at 32x32; the menus' round SpongeBob badge, a 128x128
+  CI8 texture in MN\mnui.HIP, is used instead. It is game data, so `crates/tssm/build.rs`
+  reads it from the extracted disc at build time (`TSSM_DISC`, set by the builder; the
+  workspace's disc otherwise), resizes it to 16 to 256 pixels and writes an icon resource
+  (.res) for the linker. Without a disc there is no icon and the build goes on.
+- The window and taskbar get the same icon (`Icon::from_resource(1)`).
+- Checked: the icon read back from the built exe and from the .res at 32 and 256 pixels
+  (screenshots); the game starts as before.
+
 ### Return on the settings screen keeps the changes
 - The user asked that changing a setting (Rumble) and clicking the on-screen Return saves
   it. The game drops changes not accepted with A, so going back from the settings screen

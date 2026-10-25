@@ -262,6 +262,15 @@ impl ApplicationHandler for App {
             .with_title("The SpongeBob SquarePants Movie")
             .with_inner_size(LogicalSize::new(960.0, 720.0))
             .with_fullscreen((!windowed).then(|| Fullscreen::Borderless(None)));
+        // The exe's icon (build.rs) on the title bar and taskbar too, when the build had one.
+        #[cfg(windows)]
+        let attributes = {
+            use winit::platform::windows::{IconExtWindows, WindowAttributesExtWindows};
+            match winit::window::Icon::from_resource(1, None) {
+                Ok(icon) => attributes.with_window_icon(Some(icon.clone())).with_taskbar_icon(Some(icon)),
+                Err(_) => attributes,
+            }
+        };
         let window = Arc::new(event_loop.create_window(attributes).expect("cannot create window"));
         let size = window.inner_size();
         aspect::set_window(size.width, size.height);

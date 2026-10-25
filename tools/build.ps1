@@ -146,7 +146,7 @@ if ($id -ne "GGVE78") { Fail "this is not The SpongeBob SquarePants Movie for Ga
 if ($revision -ne 1) { Fail "this is revision $revision of the disc; the port is made for revision 1." }
 
 Step "Extracting the disc"
-# Builds before 0.1.1 put the game in dist; its disc and saves move next to build.bat.
+# Earlier builds put the game in dist; its disc and saves move next to build.bat.
 $old = Join-Path $root "dist"
 if ((Test-Path $Out) -and (Resolve-Path $Out).Path -eq $root -and (Test-Path $old)) {
     foreach ($name in @("disc", "saves")) {
@@ -181,6 +181,8 @@ if ($Force -or -not (Test-Path $stamp) -or (Get-Content $stamp -Raw).Trim() -ne 
 
 $buildProfile = if ($Dev) { "debug" } else { "release" }
 Step "Building the game ($buildProfile; the first build takes a while)"
+# The exe's icon is a picture from this disc (crates\tssm\build.rs).
+$env:TSSM_DISC = $disc
 if ($Dev) { Run $cargo @("build", "-p", "tssm") } else { Run $cargo @("build", "-p", "tssm", "--release") }
 
 Step "Putting it together in $Out"
