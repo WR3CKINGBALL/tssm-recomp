@@ -2,8 +2,8 @@
 #
 #   powershell -ExecutionPolicy Bypass -File tools\build.ps1 [-Iso <image.iso>] [-Out <folder>] [-Dev] [-Force] [-Yes]
 #
-# Without -Iso a file dialog asks for the image. The result is a folder (default: dist)
-# with TSSM.exe, config\ and disc\; start TSSM.exe from there.
+# Without -Iso a file dialog asks for the image. The result is "The SpongeBob Movie Game.exe"
+# with config\ and disc\ beside it, by default in this folder, next to build.bat.
 #
 # Steps, each skipped when its result is already there and up to date:
 #   1. check the tools: Rust (cargo) and the Visual Studio C++ build tools with a Windows
@@ -14,13 +14,13 @@
 #   3. extract the disc into <Out>\disc (crates\recomp\src\bin\extract.rs)
 #   4. recompile the game's code into crates\game\src\gen (crates\recomp)
 #   5. build the executable (release; -Dev builds the faster-to-compile dev profile)
-#   6. put TSSM.exe and the config files in <Out>; config files already there are kept
+#   6. put the executable and the config files in <Out>; config files already there are kept
 #
 # -Force redoes the extraction and the recompilation.
 
 param(
     [string]$Iso,
-    [string]$Out = "dist",
+    [string]$Out,
     [switch]$Dev,
     [switch]$Force,
     [switch]$Yes
@@ -31,6 +31,8 @@ $ProgressPreference = "SilentlyContinue"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
+if (-not $Out) { $Out = $root }
+$exeName = "The SpongeBob Movie Game.exe"
 
 # The game's code on the disc, and its SHA-1 for GGVE78 revision 1.
 $elfName = "sb04gc_nm.elf"
@@ -144,6 +146,18 @@ if ($id -ne "GGVE78") { Fail "this is not The SpongeBob SquarePants Movie for Ga
 if ($revision -ne 1) { Fail "this is revision $revision of the disc; the port is made for revision 1." }
 
 Step "Extracting the disc"
+# Builds before 0.1.1 put the game in dist; its disc and saves move next to build.bat.
+$old = Join-Path $root "dist"
+if ((Test-Path $Out) -and (Resolve-Path $Out).Path -eq $root -and (Test-Path $old)) {
+    foreach ($name in @("disc", "saves")) {
+        if ((Test-Path (Join-Path $old $name)) -and -not (Test-Path (Join-Path $Out $name))) {
+            Move-Item (Join-Path $old $name) (Join-Path $Out $name)
+            Write-Host "Moved dist\$name here"
+        }
+    }
+    # Left there it would be found by a search and start without the game's files.
+    Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $old "TSSM.exe")
+}
 $disc = Join-Path $Out "disc"
 $elf = Join-Path $disc "files\$elfName"
 if ($Force -or -not (Test-Path $elf) -or (Sha1 $elf) -ne $elfSha1) {
@@ -166,19 +180,22 @@ if ($Force -or -not (Test-Path $stamp) -or (Get-Content $stamp -Raw).Trim() -ne 
 }
 
 $buildProfile = if ($Dev) { "debug" } else { "release" }
-Step "Building TSSM.exe ($buildProfile; the first build takes a while)"
+Step "Building the game ($buildProfile; the first build takes a while)"
 if ($Dev) { Run $cargo @("build", "-p", "tssm") } else { Run $cargo @("build", "-p", "tssm", "--release") }
 
 Step "Putting it together in $Out"
-Copy-Item -Force "target\$buildProfile\tssm.exe" (Join-Path $Out "TSSM.exe")
+Copy-Item -Force "target\$buildProfile\tssm.exe" (Join-Path $Out $exeName)
 $config = Join-Path $Out "config"
 New-Item -ItemType Directory -Force $config | Out-Null
+# Building into this folder: config is already the game's.
+$sameConfig = (Resolve-Path $config).Path -eq (Resolve-Path "config").Path
 foreach ($file in Get-ChildItem "config" -File) {
+    if ($sameConfig) { break }
     $target = Join-Path $config $file.Name
     # The HLE list belongs to this build; the rest are the player's settings.
     if ($file.Name -eq "hle.txt" -or -not (Test-Path $target)) { Copy-Item -Force $file.FullName $target }
 }
 
 Write-Host ""
-Write-Host "Done. Start $(Join-Path (Resolve-Path $Out) 'TSSM.exe')" -ForegroundColor Green
+Write-Host "Done. Start $(Join-Path (Resolve-Path $Out) $exeName)" -ForegroundColor Green
 Write-Host "Saves are kept in $(Join-Path $Out 'saves') once the game has made one."

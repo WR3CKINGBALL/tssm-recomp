@@ -3,7 +3,7 @@ The SpongeBob SquarePants Movie - Windows port builder
 
 This package does not contain the game. It turns your own copy of the GameCube disc into a
 Windows game: it reads the game's code from your disc image, translates it, and builds
-TSSM.exe on your computer.
+"The SpongeBob Movie Game.exe" on your computer.
 
 You need
   - A disc image (.iso or .gcm) of The SpongeBob SquarePants Movie for GameCube, USA
@@ -18,9 +18,9 @@ How to build
      and install them (answer Y). Windows asks for permission for the build tools.
   4. Wait. The first build takes a while (the tools, then the game: about 10 to 30
      minutes depending on the computer). Later builds are much quicker.
-  5. Start dist\TSSM.exe.
+  5. Start "The SpongeBob Movie Game.exe", which appears next to build.bat.
 
-Your saves go in dist\saves. Settings are in dist\config, and the frame rate and field of
-view can also be set in the game (Options, Options).
+Your saves go in the saves folder and settings in the config folder. The frame rate and
+field of view can also be set in the game (Options, Options).
 
-Controls: see dist\config\controls.txt. A gamepad works too.
+Controls: see config\controls.txt. A gamepad works too.

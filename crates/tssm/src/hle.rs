@@ -266,6 +266,7 @@ fn pad_read(c: &mut Ctx) {
     }
     warp(c, retrace);
     upgrades(c);
+    upgrade_points(c);
     trace_player(c);
     c.r[3] = 0;
 }
@@ -330,6 +331,19 @@ fn upgrades(c: &mut Ctx) {
     }
     let now: [u8; 10] = c.slice_mut(GLOBALS + 0xAD9, 10).try_into().unwrap();
     eprintln!("[cheat] all upgrades given: levels {levels:?} -> {now:?}");
+}
+
+/// TSSM_UPGRADE_POINTS=5 gives that many points to spend on the skills menu, once a level has
+/// been running for a second, for testing purchases. They are the game's `globals` at 0x1EC8
+/// (IncManlinessPoints adds one at each step of the manliness meter).
+fn upgrade_points(c: &mut Ctx) {
+    static POINTS: std::sync::OnceLock<Option<u16>> = std::sync::OnceLock::new();
+    static FRAMES: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+    let Some(points) = *POINTS.get_or_init(|| std::env::var("TSSM_UPGRADE_POINTS").ok()?.parse().ok()) else { return };
+    if c.r32(GAME_MODE) == 12 && FRAMES.fetch_add(1, std::sync::atomic::Ordering::Relaxed) == 60 {
+        c.w16(0x804A_DA80 + 0x1EC8, points);
+        eprintln!("[cheat] {points} upgrade points");
+    }
 }
 
 /// Runs before RenderWare's `_rwDlRasterShowRaster`, which submits a finished frame to its

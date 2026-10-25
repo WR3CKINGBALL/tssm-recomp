@@ -133,6 +133,26 @@ pub fn escape_goes_back() -> bool {
     crate::input::keyboard_in_use() && active() && !TAKES_START.load(Ordering::Relaxed)
 }
 
+/// Whether the menu on show is the level select (pause) screen, not asking anything: there
+/// Enter stays Start, which goes back to the game.
+static ON_LEVEL_SELECT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Whether Enter should accept (A) rather than be the button it is bound to (Start): in the
+/// same menus as Escape goes back, except the level select screen.
+pub fn enter_accepts() -> bool {
+    escape_goes_back() && !ON_LEVEL_SELECT.load(Ordering::Relaxed)
+}
+
+/// Presses buttons for the player: a hint clicked, or Escape. Going back from the settings
+/// screen accepts its changes first (A, "Accept changes"), which the game otherwise drops.
+pub(crate) fn press(bits: u32) {
+    if bits == crate::input::B && crate::options::settings_on_show() {
+        crate::options::let_accept_through();
+        crate::input::pulse(crate::input::A);
+    }
+    crate::input::pulse(bits);
+}
+
 /// Called from the window thread when the cursor moves, in pixels from the window's top
 /// left corner, with the window's size. The flat parts of the picture (menus) keep their 4:3
 /// shape in the middle of a wide one, and the picture has bars when the window is narrower
@@ -351,6 +371,10 @@ fn steers_itself(c: &Ctx, holder: &Widget, events: [u16; 2]) -> bool {
 /// "(X) Options" and "(B) Return to game".
 const WARP_HINT: u32 = 0xC912_E9DA;
 const OPTIONS_HINT: u32 = 0x8CAD_1203;
+/// The skills menu's middle hint, "Upgrade description". While the menu asks "Are you sure
+/// you want this upgrade?" no widget takes the pad (the menu's controller reads it) and the
+/// other two hints read Yes and No.
+const UPGRADE_HINT: u32 = 0x3ABD_D395;
 const RETURN_HINT: u32 = 0x6EBF_D80A;
 /// zUIText::DoRender()
 const RENDER_TEXT: u32 = 0x8018_53DC;
@@ -928,17 +952,28 @@ pub fn before_update(c: &mut Ctx) {
     if crate::options::update(c, &widgets) {
         return;
     }
-    if holders.is_empty() && !asking && !title {
+    let buying = keyboard && holders.is_empty() && widgets.iter().any(|w| w.id == UPGRADE_HINT);
+    if holders.is_empty() && !asking && !title && !buying {
         return;
     }
     MENU_SEEN.store(clock(), Ordering::Relaxed);
     TAKES_START.store(widgets.iter().any(|w| links(c, w.addr).iter().any(|(received, ..)| *received == START_EVENT)), Ordering::Relaxed);
+    ON_LEVEL_SELECT.store(!asking && widgets.iter().any(|w| w.id == OPTIONS_HINT), Ordering::Relaxed);
     let (at, moved, clicked) = {
         let mut pointer = POINTER.lock().unwrap();
         (pointer.at, std::mem::take(&mut pointer.moved), std::mem::take(&mut pointer.clicked))
     };
     if asking {
         answer_question(&widgets, at, clicked);
+        return;
+    }
+    // The skills menu's question: a click on Yes or No presses its button.
+    if buying {
+        if let (Some(at), true) = (at, clicked) {
+            if let Some(bits) = hint_at(c, &widgets, at) {
+                crate::input::pulse(bits);
+            }
+        }
         return;
     }
     if clock().saturating_sub(ASKED_AT.load(Ordering::Relaxed)) > 500 {
@@ -1018,7 +1053,7 @@ pub fn before_update(c: &mut Ctx) {
             }
             // Not on an item: a click on a hint ("Return") presses the button it stands for.
             if let Some(bits) = hint_at(c, &widgets, at) {
-                crate::input::pulse(bits);
+                press(bits);
             }
         }
         return;
@@ -1049,7 +1084,8 @@ pub fn before_update(c: &mut Ctx) {
 /// "320,165@2900 click@2950 right@3100 wheel-1@3200" puts the cursor at that point of the
 /// 640 by 480 screen at retrace 2900, clicks at 2950, presses the right button at 3100 and
 /// turns the wheel a notch down at 3200; "gamepad@3300" and "keyboard@3400" make that the
-/// device last used; "press" and "release" put the left button down and up, for drags.
+/// device last used; "press" and "release" put the left button down and up, for drags;
+/// "escape" and "enter" press those keys.
 /// Called once per pad poll.
 pub fn script(retrace: u32) {
     static SCRIPT: std::sync::OnceLock<Vec<(u32, String)>> = std::sync::OnceLock::new();
@@ -1066,9 +1102,10 @@ pub fn script(retrace: u32) {
             break;
         }
         DONE.fetch_add(1, Ordering::Relaxed);
-        if what == "escape" {
-            crate::input::key_event(winit::keyboard::KeyCode::Escape, true);
-            crate::input::key_event(winit::keyboard::KeyCode::Escape, false);
+        if what == "escape" || what == "enter" {
+            let key = if what == "escape" { winit::keyboard::KeyCode::Escape } else { winit::keyboard::KeyCode::Enter };
+            crate::input::key_event(key, true);
+            crate::input::key_event(key, false);
         } else if what == "gamepad" || what == "keyboard" {
             crate::input::set_gamepad_last(what == "gamepad");
         } else if what == "click" {

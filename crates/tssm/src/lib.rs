@@ -377,7 +377,45 @@ fn start(disc: PathBuf, event_loop: EventLoop<()>) {
     event_loop.run_app(&mut app).expect("event loop failed");
 }
 
+/// Without a disc folder given, the game's files (disc, config, saves) are the ones next to
+/// the executable: Windows search and shortcuts can start it from another folder.
+fn enter_game_folder() {
+    let here = std::path::Path::new("disc/sys/main.dol");
+    if here.exists() {
+        return;
+    }
+    if let Some(folder) = std::env::current_exe().ok().and_then(|exe| exe.parent().map(PathBuf::from)) {
+        if folder.join(here).exists() {
+            let _ = std::env::set_current_dir(&folder);
+            return;
+        }
+    }
+    let text = "The game's files were not found next to this program (a folder named disc).\n\n\
+                Start the copy that build.bat made, next to build.bat: \"The SpongeBob Movie Game.exe\". \
+                If there is none, run build.bat again.";
+    eprintln!("{text}");
+    message_box("The SpongeBob SquarePants Movie", text);
+    std::process::exit(1);
+}
+
+#[cfg(windows)]
+fn message_box(title: &str, text: &str) {
+    #[link(name = "user32")]
+    extern "system" {
+        fn MessageBoxW(window: *mut std::ffi::c_void, text: *const u16, title: *const u16, kind: u32) -> i32;
+    }
+    let wide = |s: &str| s.encode_utf16().chain([0]).collect::<Vec<u16>>();
+    // MB_ICONERROR
+    unsafe { MessageBoxW(std::ptr::null_mut(), wide(text).as_ptr(), wide(title).as_ptr(), 0x10) };
+}
+
+#[cfg(not(windows))]
+fn message_box(_title: &str, _text: &str) {}
+
 pub fn main() {
+    if std::env::args().nth(1).is_none() {
+        enter_game_folder();
+    }
     let disc = PathBuf::from(std::env::args().nth(1).unwrap_or_else(|| "disc".into()));
     if std::env::var_os("TSSM_HEADLESS").is_some() {
         spawn_watchdog();

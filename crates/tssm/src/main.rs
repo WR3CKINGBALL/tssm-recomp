@@ -40,7 +40,33 @@
 //!   TSSM_UPGRADES=1        every move upgraded and all health slots, for testing (see hle.rs)
 //!   TSSM_MOUSE="320,165@2900 click@2950"  scripted mouse in menus (see menu.rs)
 //!   TSSM_TRACE_UI=1        every 2 s, list the menu widgets on show with their links
+//!
+//! Release builds are Windows programs, without a console window of their own. Started from
+//! a terminal they print to it; their output can also be redirected to a file as usual.
+
+// Debug builds keep the console, for the log.
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
 fn main() {
+    #[cfg(all(windows, not(debug_assertions)))]
+    use_parent_console();
     tssm::main();
+}
+
+/// Prints to the terminal the game was started from, if any, unless its output is already
+/// going somewhere (a file or a pipe).
+#[cfg(all(windows, not(debug_assertions)))]
+fn use_parent_console() {
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetStdHandle(which: u32) -> *mut std::ffi::c_void;
+        fn AttachConsole(process: u32) -> i32;
+    }
+    const STD_ERROR_HANDLE: u32 = -12i32 as u32;
+    const ATTACH_PARENT_PROCESS: u32 = u32::MAX;
+    unsafe {
+        if GetStdHandle(STD_ERROR_HANDLE).is_null() {
+            AttachConsole(ATTACH_PARENT_PROCESS);
+        }
+    }
 }

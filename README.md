@@ -21,7 +21,7 @@ Rust, and compiles a native executable on your computer.
 2. Double-click `build.bat` and choose your disc image (`.iso` or `.gcm`).
 3. If Rust or the Visual Studio C++ build tools are missing, it offers to download and install
    them (answer `Y`).
-4. When it is done, start `dist\TSSM.exe`.
+4. When it is done, start **The SpongeBob Movie Game.exe**, which appears next to `build.bat`.
 
 From a terminal: `powershell -ExecutionPolicy Bypass -File tools\build.ps1 -Iso <image>`
 (`-Dev` for a quicker-to-compile build, `-Force` to redo every step, `-Yes` to install missing

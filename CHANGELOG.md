@@ -3,6 +3,59 @@
 Static recompilation of The SpongeBob SquarePants Movie (GameCube, GGVE78 rev 1) to Rust.
 Newest entries first. There is no git history yet, so this file is the record.
 
+## 2026-10-25
+
+### Return on the settings screen keeps the changes
+- The user asked that changing a setting (Rumble) and clicking the on-screen Return saves
+  it. The game drops changes not accepted with A, so going back from the settings screen
+  with the keyboard and mouse (a click on Return, or Escape) now presses A first, then B
+  (`menu::press`; options.rs does the same for its own hint clicks). A reaches the game
+  for that moment even while Frame Rate or Field of View has the focus.
+- Checked headless: Rumble set to Off by a click, then a click on Return: the screen went
+  back to the options list, and Off was kept on going in again; the same with Escape.
+  Return with nothing changed goes back as before.
+
+### Enter accepts in menus; Yes on the skills menu's question can be clicked
+- Enter is bound to Start, which the settings screen ignores: changes there needed Space
+  (A, "Accept changes") before Return (the user's report). In menus, with the keyboard and
+  mouse in use, Enter (and the keypad's) now presses A, as Escape presses B. The level
+  select (pause) screen is left alone, so Enter still goes back to the game from it.
+- The skills menu's "Are you sure you want this upgrade?": no widget takes the pad while
+  it asks (the menu's own controller reads it), so the mouse code saw no menu and ignored
+  the click on Yes or No, and Enter was Start. The question is now recognised by the
+  menu's "Upgrade description" hint (`UPGRADE_HINT`) with nothing holding the focus: a
+  click on Yes or No presses its button, and Enter and Escape work as in other menus.
+- Tests: `TSSM_UPGRADE_POINTS=5` gives points to spend (the game's `globals` + 0x1EC8);
+  `TSSM_MOUSE` takes `enter@N`.
+- Checked headless with screenshots: settings, a click on Rumble's Off and Enter, then out
+  and back in: Off kept (without Enter it was not, as with Space). Skills: a click on
+  Health, a second click asks, a click on Yes: the game's note on the upgrade came up, and
+  after it points 5 -> 4 and Health's first bar filled. Not checked: Enter on the pause
+  screen (the scripted key is pressed and released at once, which only counts for keys
+  this code turns into presses; it takes the same path as before).
+
+### No command prompt window with the game
+- Release builds are Windows (GUI) programs, so starting the game no longer opens a
+  console beside it (the user asked). Started from a terminal they attach to it and print
+  there; redirected output (`2> log.txt`) works as before. Debug (`-Dev`) builds keep the
+  console. Checked: the exe's PE subsystem is 2, no console child process, and a redirected
+  run logged as usual.
+
+### The builder makes "The SpongeBob Movie Game.exe" next to build.bat
+- The user built from the v0.1.0 package, could not find `dist\TSSM.exe`, searched for it,
+  and every `TSSM.exe` found closed at once. Windows search starts a program in another
+  folder, so the game looked for `disc` and `config` in the wrong place; the other two
+  copies were cargo's, in `target`, with no game files beside them at all.
+- `tools\build.ps1` now puts `The SpongeBob Movie Game.exe` with `disc`, `config` and
+  `saves` in the build.bat folder (`-Out` still picks another). A v0.1.0 build's `dist\disc`
+  and `dist\saves` are moved there and `dist\TSSM.exe` is deleted.
+- The game (desktop, no disc folder given) uses the files next to its executable when
+  there is no `disc` in the folder it was started in; with none there either it shows a
+  message saying which program to start, instead of closing silently.
+- Checked in the user's Spongebobbb folder: the rebuild moved the disc and made the exe;
+  started from `C:\Windows\System32` it ran, and `target\release\tssm.exe` started from
+  there showed the message.
+
 ## 2026-10-24
 
 ### One step from a disc image to the game, and a package to hand out

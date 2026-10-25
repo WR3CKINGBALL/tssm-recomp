@@ -132,6 +132,20 @@ fn on_show(state: &State) -> bool {
     state.seen != 0 && clock().saturating_sub(state.seen) < 250
 }
 
+/// Whether the settings screen is on show.
+pub fn settings_on_show() -> bool {
+    on_show(&STATE.lock().unwrap())
+}
+
+/// Until when A reaches the game although one of these rows has the focus (milliseconds on
+/// `clock`): leaving the screen accepts its changes first (`menu::press`).
+static ACCEPT_UNTIL: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Lets A through for a moment, for the accept that leaving the screen presses.
+pub fn let_accept_through() {
+    ACCEPT_UNTIL.store(clock() + 500, std::sync::atomic::Ordering::Relaxed);
+}
+
 /// Which of a setting's values is in use.
 fn current(setting: usize) -> usize {
     let now = match setting {
@@ -291,6 +305,11 @@ pub fn update(c: &mut Ctx, widgets: &[Widget]) -> bool {
     } else if (WORDS_TOP..WORDS_TOP + 40.0).contains(&at.1) && (WORD_RIGHT + 20.0..WORD_RIGHT + 80.0).contains(&at.0) {
         choose(focus, 10);
     } else if let Some(bits) = menu::hint_at(c, widgets, at) {
+        // Return accepts the changes first, as `menu::press` does (STATE is held here).
+        if bits == crate::input::B {
+            let_accept_through();
+            crate::input::pulse(crate::input::A);
+        }
         crate::input::pulse(bits);
     }
     true
@@ -343,7 +362,7 @@ pub fn filter_pad(status: &mut [u8]) {
         }
         return;
     };
-    strip(status, A);
+    strip(status, if clock() < ACCEPT_UNTIL.load(std::sync::atomic::Ordering::Relaxed) { 0 } else { A });
     if act & 1 != 0 {
         if focus == 0 {
             state.focus = None;

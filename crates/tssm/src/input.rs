@@ -668,7 +668,12 @@ pub fn key_event(key: KeyCode, pressed: bool) {
     // In a menu Escape goes back a screen (B), and from the pause screen back to the game,
     // whatever it is bound to.
     if pressed && key == KeyCode::Escape && crate::menu::escape_goes_back() {
-        pulse(B);
+        crate::menu::press(B);
+        return;
+    }
+    // And Enter accepts (A), as Space does.
+    if pressed && matches!(key, KeyCode::Enter | KeyCode::NumpadEnter) && crate::menu::enter_accepts() {
+        pulse(A);
         return;
     }
     set_held(Source::Key(key), pressed);
