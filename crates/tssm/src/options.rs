@@ -132,9 +132,15 @@ fn on_show(state: &State) -> bool {
     state.seen != 0 && clock().saturating_sub(state.seen) < 250
 }
 
-/// Whether the settings screen is on show.
+/// Whether the settings screen is on show and in its place. After it has been left the game
+/// keeps its widgets, slid out of sight, while the options list is up: not on show then.
 pub fn settings_on_show() -> bool {
-    on_show(&STATE.lock().unwrap())
+    let state = STATE.lock().unwrap();
+    on_show(&state) && !slid_away(&state)
+}
+
+fn slid_away(state: &State) -> bool {
+    state.offset.1.abs() > 100.0
 }
 
 /// Until when A reaches the game although one of these rows has the focus (milliseconds on
@@ -242,7 +248,7 @@ pub fn update(c: &mut Ctx, widgets: &[Widget]) -> bool {
     offsets.sort_by(f32::total_cmp);
     state.offset = (sfx.rect[0] - ROWS_LEFT, offsets[1]);
     // Not on show, or slid away: the focus is the game's again when it comes back.
-    if !on_show(&state) || state.offset.1.abs() > 100.0 {
+    if !on_show(&state) || slid_away(&state) {
         state.focus = None;
     }
     state.seen = clock();
@@ -259,6 +265,10 @@ pub fn update(c: &mut Ctx, widgets: &[Widget]) -> bool {
         }
     }
 
+    // Slid away, its rows are not where a click on the options list could land.
+    if slid_away(&state) {
+        return false;
+    }
     let (at, moved, clicked) = menu::peek_pointer();
     let row_at = |at: (f32, f32)| {
         (0..SETTINGS.len()).find(|&i| {

@@ -13,6 +13,9 @@ bytemuck = { version = "1.25.2", features = ["derive"] }
 cpal = "0.18.2"
 gilrs = "0.11.2"
 rayon = "1.12.0"
+png = "0.18.1"
+xxhash-rust = { version = "0.8.19", features = ["xxh64"] }
+zip = { version = "9.1.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 # Android has no main(): the activity glue winit brings in calls into the library instead
 # (see crates/android).

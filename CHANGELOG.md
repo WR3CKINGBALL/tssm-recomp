@@ -5,6 +5,65 @@ Newest entries first. There is no git history yet, so this file is the record.
 
 ## 2026-10-25
 
+### A texture pack next to the game is offered when it starts; sharper sky flowers
+- The user asked that a pack added after building, put next to the exe, be offered on
+  launch. Packs are read when the game starts, so nothing is rebuilt: a zip next to the
+  game holding textures by Dolphin's names brings up a Yes/No box, Yes moves it into the
+  textures folder, and No is remembered in config/textures.txt so it is asked once
+  (`pack::offer`; `TSSM_PACK_ANSWER=yes|no` answers for tests).
+- With a pack, the flowers in Bikini Bottom's sky are sharpened as the fonts are (the two
+  flower textures from BB/bb02.HOP, found by contents; `font.rs` became `sharpen.rs`).
+  The sky has one flower drawn blurred (in both flower textures), which the user wanted
+  crisp like the rest. Sharpening it against its own strength left a thick, blobby stroke,
+  and its thin parts next to thick ones vanished; tracing its centre line tangled where its
+  petals run together. So it is drawn again (`redraw_blurred`): the blur's texels and faint
+  fringe are cleared and the solid flower closest in size is copied into its place, inside
+  the blur's 3-texel spread, in the blur's own colour; then all of it is sharpened as the
+  letters are.
+- Checked: in a scratch folder with two test packs and a zip that is not one: No lists
+  both, a later Yes does not ask again; Yes moves both into textures; the other zip is
+  left alone. BB02 with the pack: the flower texture sharpened, outlines smooth on screen
+  (the user's screenshot too).
+
+### Fix: stuck on the options menu after the settings screen
+- The user's report: after changing a setting and going back, Escape and Return on the
+  options menu kept them there. After the settings screen has been left the game keeps
+  its widgets, slid 450 pixels out of sight, so the port still took it for on show, and
+  going back pressed A (accept) first, which chose the highlighted item again. The
+  settings screen now counts as on show only in its place (`options::settings_on_show`),
+  and the port's mouse handling of its rows stops while it is slid away.
+- Checked: settings, Rumble changed, Return, then Escape twice: options list, main menu,
+  title screen.
+
+### Sharper text
+- The user found the game's text pixelated, with the Xbox textures too. The fonts are
+  256x256 atlases (letters about 13 texels tall, coverage in 8 alpha steps) drawn several
+  times larger and unfiltered, so every texel shows as a step; the Xbox pack's fonts are
+  the same size. `font.rs` finds the font textures in the disc's font.HIP (the paletted
+  ones of 128 texels or more: the SpongeBob lettering, a plain font, the large digits) and,
+  when the game uploads one, blows it up 4x: coverage with a Catmull-Rom filter, then a
+  steep smoothstep around one half, which keeps the letters' shapes with smooth edges. gx.rs
+  samples those textures filtered. It applies to a pack's version of a font as well.
+- Only with a texture pack in use (the user's choice): without the Xbox textures the text
+  is drawn as the game made it.
+- Checked: Mindy's dialogue in BB01 at the same frame as before: the letters' outlines and
+  shadows are smooth instead of stepped, same shapes and layout.
+
+### Texture packs (the Xbox version's textures)
+- The user supplied a Dolphin texture pack of the Xbox and PS2 versions' textures
+  (GameBanana mod 648590) and asked that players be offered it, as they supply the disc.
+  `pack.rs` loads packs from the textures folder next to the game, PNGs loose or in zips,
+  and gx.rs uploads a replacement in place of the decoded texture, at its own size.
+- Names are matched as Dolphin makes them: the XXH64 of the texture's level 0 data and,
+  for paletted formats, of the palette entries from the lowest index used to the highest;
+  "_m", "_arb" and "$" are accepted, mipmap levels ignored. `TSSM_TRACE_PACK=1` logs each
+  texture's name and whether the pack has it.
+- The builder asks whether to use the Xbox textures, opens the GameBanana page, and copies
+  the chosen zip into textures (`-Textures <zip>` without asking).
+- Checked: Bikini Bottom (BB01) with the pack: 137 textures used, all 137 replaced, none
+  missed; screenshots against the same frame without it show the cleaner textures. The
+  font textures are replaced at the same 256x256, so text is no sharper with the pack.
+
 ### The exe has the game's SpongeBob as its icon
 - The user asked for a picture from the game as the exe's icon. The memory card icon
   (files\SBGCIcon.tpl) was too small at 32x32; the menus' round SpongeBob badge, a 128x128

@@ -40,6 +40,8 @@
 //!   TSSM_UPGRADES=1        every move upgraded and all health slots, for testing (see hle.rs)
 //!   TSSM_MOUSE="320,165@2900 click@2950"  scripted mouse in menus (see menu.rs)
 //!   TSSM_TRACE_UI=1        every 2 s, list the menu widgets on show with their links
+//!   TSSM_PACK_ANSWER=no    answer the question about a texture pack next to the game
+//!   TSSM_TRACE_PACK=1      log each texture's name in a texture pack's terms and whether it has one
 //!
 //! Release builds are Windows programs, without a console window of their own. Started from
 //! a terminal they print to it; their output can also be redirected to a file as usual.

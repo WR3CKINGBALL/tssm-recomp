@@ -24,3 +24,5 @@ config/fov.txt
 # Session transcripts
 2026-*.txt
 /The SpongeBob Movie Game.exe
+/textures/
+/*.zip

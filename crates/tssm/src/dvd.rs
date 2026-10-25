@@ -46,6 +46,7 @@ impl Dvd {
         let count = be(8) as usize;
         let names = count * 12;
         let root = disc.join("files");
+        crate::sharpen::find(&root);
 
         let mut dvd = Dvd {
             entries: vec![Entry { host_path: root.clone(), offset: 0, size: 0, is_dir: true }],

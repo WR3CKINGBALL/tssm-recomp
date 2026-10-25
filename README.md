@@ -14,6 +14,9 @@ Rust, and compiles a native executable on your computer.
   the same speed; the driving levels' car is stepped at a fixed rate so it handles the same.
 - Field of view setting (60 to 110), widescreen and ultrawide.
 - Keyboard and mouse (mouse look, clickable menus) and gamepads.
+- With a texture pack, sharper text and sky flowers too: upscaled with smooth edges.
+- Texture packs in Dolphin's format: put the zip next to the game and it asks whether to use it
+  (or put it in the `textures` folder).
 
 ## Building
 
@@ -21,7 +24,9 @@ Rust, and compiles a native executable on your computer.
 2. Double-click `build.bat` and choose your disc image (`.iso` or `.gcm`).
 3. If Rust or the Visual Studio C++ build tools are missing, it offers to download and install
    them (answer `Y`).
-4. When it is done, start **The SpongeBob Movie Game.exe**, which appears next to `build.bat`.
+4. It offers the Xbox version's textures, a separate download
+   ([GameBanana](https://gamebanana.com/mods/648590)): answer `Y` and choose the downloaded zip.
+5. When it is done, start **The SpongeBob Movie Game.exe**, which appears next to `build.bat`.
 
 From a terminal: `powershell -ExecutionPolicy Bypass -File tools\build.ps1 -Iso <image>`
 (`-Dev` for a quicker-to-compile build, `-Force` to redo every step, `-Yes` to install missing

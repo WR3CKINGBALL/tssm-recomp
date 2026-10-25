@@ -18,9 +18,14 @@ How to build
      and install them (answer Y). Windows asks for permission for the build tools.
   4. Wait. The first build takes a while (the tools, then the game: about 10 to 30
      minutes depending on the computer). Later builds are much quicker.
-  5. Start "The SpongeBob Movie Game.exe", which appears next to build.bat.
+  5. It offers the Xbox version's textures, a separate download from
+     https://gamebanana.com/mods/648590 - answer Y, download the pack, and choose its zip.
+  6. Start "The SpongeBob Movie Game.exe", which appears next to build.bat.
 
 Your saves go in the saves folder and settings in the config folder. The frame rate and
 field of view can also be set in the game (Options, Options).
+
+Texture packs made for Dolphin work too: put the zip next to the game, and the game asks
+whether to use it when it starts (or put the zip, or its PNGs, in the textures folder).
 
 Controls: see config\controls.txt. A gamepad works too.

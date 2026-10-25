@@ -929,6 +929,8 @@ pub struct Gx {
     /// Texture lookups already done this frame, keyed by address, image and palette
     /// registers. Emptied whenever texture contents may have changed.
     texture_cache: std::collections::HashMap<(u32, u32, u32), Option<usize>>,
+    /// Renderer ids of the upscaled textures, sampled filtered (sharpen.rs).
+    smooth_textures: std::collections::HashSet<usize>,
     /// Index of the next draw within the current frame.
     draw_index: u32,
     /// Debugging aids: a frame whose draws are all described (TSSM_DUMP_FRAME=n), and draw
@@ -1087,6 +1089,7 @@ impl Gx {
             trace_draws: 0,
             traced_after_copy: false,
             texture_cache: std::collections::HashMap::new(),
+            smooth_textures: std::collections::HashSet::new(),
             draw_index: 0,
             dump_frame: std::env::var("TSSM_DUMP_FRAME").ok().and_then(|v| v.trim().parse().ok()),
             skip_draws: std::env::var("TSSM_SKIP_DRAWS")
@@ -1151,6 +1154,11 @@ impl Gx {
         f32::from_bits(self.xf[index])
     }
 
+    /// The sampling for a texture: filtered for the upscaled ones, else as the game set it.
+    fn sampling(&self, id: usize, sampler: SamplerKey) -> SamplerKey {
+        if self.smooth_textures.contains(&id) { (sampler.0, sampler.1, true) } else { sampler }
+    }
+
     /// The texture bound to texture map `map`: its renderer id, its sampling mode, and an
     /// amount to subtract from coordinates that sample it. Decodes and uploads the texture on
     /// first use.
@@ -1174,7 +1182,7 @@ impl Gx {
         // frame per texture, not once per draw; a failed lookup is remembered too.
         let cache_key = (address, image, tlut);
         if let Some(&cached) = self.texture_cache.get(&cache_key) {
-            return cached.map(|id| (id, sampler, [0.0; 2]));
+            return cached.map(|id| (id, self.sampling(id, sampler), [0.0; 2]));
         }
         self.texture_cache.insert(cache_key, None);
         // A controller button's picture, while the keyboard and mouse are in use: show the key
@@ -1201,16 +1209,33 @@ impl Gx {
         let key = (address, w, h, format | palette_format << 8, contents);
 
         let renderer = self.renderer.as_mut()?;
-        let id = renderer.find_texture(&key).unwrap_or_else(|| {
-            let lookup = |i: usize| {
-                let entry = palette.get(i * 2..i * 2 + 2);
-                entry.map_or([0; 4], |e| texture::palette_color(palette_format, u16::from_be_bytes([e[0], e[1]])))
-            };
-            let rgba = texture::decode(format, w as usize, h as usize, &data, &lookup);
-            renderer.add_texture(key, w, h, &rgba)
-        });
+        let id = match renderer.find_texture(&key) {
+            Some(id) => id,
+            None => {
+                // A texture pack's replacement (pack.rs), at whatever size it comes in.
+                let replaced = if crate::pack::active() { crate::pack::replacement(format, w, h, &data, palette) } else { None };
+                let (tw, th, rgba) = replaced.unwrap_or_else(|| {
+                    let lookup = |i: usize| {
+                        let entry = palette.get(i * 2..i * 2 + 2);
+                        entry.map_or([0; 4], |e| texture::palette_color(palette_format, u16::from_be_bytes([e[0], e[1]])))
+                    };
+                    (w, h, texture::decode(format, w as usize, h as usize, &data, &lookup))
+                });
+                // With a texture pack, the fonts and sky flowers too: blown up with smooth
+                // edges and sampled filtered (sharpen.rs). Without one the game looks as made.
+                let sharpen = if crate::pack::active() { crate::sharpen::wanted(w, h, format, &data) } else { None };
+                if let Some(kind) = sharpen {
+                    let (tw, th, rgba) = crate::sharpen::upscale(kind, tw, th, &rgba);
+                    let id = renderer.add_texture(key, tw, th, &rgba);
+                    self.smooth_textures.insert(id);
+                    id
+                } else {
+                    renderer.add_texture(key, tw, th, &rgba)
+                }
+            }
+        };
         self.texture_cache.insert(cache_key, Some(id));
-        Some((id, sampler, [0.0; 2]))
+        Some((id, self.sampling(id, sampler), [0.0; 2]))
     }
 
     /// With the draw trace armed, describes the material state of the draw about to happen.

@@ -1,6 +1,7 @@
 # Builds the Windows port from a disc image, in one go.
 #
 #   powershell -ExecutionPolicy Bypass -File tools\build.ps1 [-Iso <image.iso>] [-Out <folder>] [-Dev] [-Force] [-Yes]
+#                                                  [-Textures <pack.zip>]
 #
 # Without -Iso a file dialog asks for the image. The result is "The SpongeBob Movie Game.exe"
 # with config\ and disc\ beside it, by default in this folder, next to build.bat.
@@ -15,6 +16,9 @@
 #   4. recompile the game's code into crates\game\src\gen (crates\recomp)
 #   5. build the executable (release; -Dev builds the faster-to-compile dev profile)
 #   6. put the executable and the config files in <Out>; config files already there are kept
+#   7. offer the Xbox version's textures: a texture pack downloaded separately (GameBanana),
+#      copied into <Out>\textures, where the game looks for one (crates\tssm\src\pack.rs).
+#      -Textures gives the pack's zip without asking; with -Yes and no -Textures, none.
 #
 # -Force redoes the extraction and the recompilation.
 
@@ -23,7 +27,8 @@ param(
     [string]$Out,
     [switch]$Dev,
     [switch]$Force,
-    [switch]$Yes
+    [switch]$Yes,
+    [string]$Textures
 )
 
 $ErrorActionPreference = "Stop"
@@ -40,6 +45,7 @@ $elfSha1 = "2eff21ee1796b124c5200ed8cde09c4d7bc1f45b"
 # Where the tools come from.
 $rustupUrl = "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe"
 $buildToolsUrl = "https://aka.ms/vs/17/release/vs_BuildTools.exe"
+$texturesUrl = "https://gamebanana.com/mods/648590"
 
 function Step($text) { Write-Host ""; Write-Host "== $text" -ForegroundColor Cyan }
 function Fail($text) { Write-Host ""; Write-Host "Build stopped: $text" -ForegroundColor Red; exit 1 }
@@ -196,6 +202,46 @@ foreach ($file in Get-ChildItem "config" -File) {
     $target = Join-Path $config $file.Name
     # The HLE list belongs to this build; the rest are the player's settings.
     if ($file.Name -eq "hle.txt" -or -not (Test-Path $target)) { Copy-Item -Force $file.FullName $target }
+}
+
+Step "Textures"
+$textureDir = Join-Path $Out "textures"
+$havePack = Get-ChildItem $textureDir -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $Textures -and -not $havePack -and -not $Yes) {
+    Write-Host "The Xbox version's textures can replace the GameCube's: the same pictures, cleaner,"
+    Write-Host "some at a higher resolution. They are a separate download from GameBanana:"
+    Write-Host "  $texturesUrl"
+    $answer = (Read-Host "Use the Xbox textures? [Y/N]").Trim().ToUpper()
+    if ($answer -eq "Y" -or $answer -eq "YES") {
+        Start-Process $texturesUrl
+        Write-Host "The page is opening in the browser. Download the pack there, then choose the zip."
+        Add-Type -AssemblyName System.Windows.Forms
+        $dialog = New-Object System.Windows.Forms.OpenFileDialog
+        $dialog.Title = "Choose the downloaded Xbox texture pack (.zip)"
+        $dialog.Filter = "Texture pack (*.zip)|*.zip|All files (*.*)|*.*"
+        $dialog.InitialDirectory = Join-Path $env:USERPROFILE "Downloads"
+        if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $Textures = $dialog.FileName }
+        else { Write-Host "No pack chosen; the game uses its own textures. To add one later, put its zip next to the game." }
+    }
+}
+if ($Textures) {
+    if (-not (Test-Path -LiteralPath $Textures)) { Fail "cannot find $Textures" }
+    # A Dolphin texture pack for this game: PNGs under textures\GGVE78.
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $Textures).Path)
+    $count = @($zip.Entries | Where-Object { $_.FullName -match "GGVE78/tex1_.*\.png$" }).Count
+    $zip.Dispose()
+    if ($count -eq 0) {
+        Write-Host "$Textures is not a texture pack for this game; the game uses its own textures." -ForegroundColor Yellow
+    } else {
+        New-Item -ItemType Directory -Force $textureDir | Out-Null
+        Copy-Item -Force -LiteralPath $Textures $textureDir
+        Write-Host "Copied the pack ($count textures) to $textureDir"
+    }
+} elseif ($havePack) {
+    Write-Host "Using the pack already in $textureDir"
+} else {
+    Write-Host "None; the game uses its own."
 }
 
 Write-Host ""

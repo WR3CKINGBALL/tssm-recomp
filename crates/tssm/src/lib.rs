@@ -18,9 +18,11 @@ mod host;
 mod input;
 mod menu;
 mod options;
+mod pack;
 mod png;
 mod render;
 mod sched;
+mod sharpen;
 mod sound;
 mod tev;
 mod texture;
@@ -403,27 +405,41 @@ fn enter_game_folder() {
                 Start the copy that build.bat made, next to build.bat: \"The SpongeBob Movie Game.exe\". \
                 If there is none, run build.bat again.";
     eprintln!("{text}");
-    message_box("The SpongeBob SquarePants Movie", text);
+    message_box("The SpongeBob SquarePants Movie", text, MB_ICONERROR);
     std::process::exit(1);
 }
 
+const MB_ICONERROR: u32 = 0x10;
+const MB_YESNO_QUESTION: u32 = 0x24;
+const IDYES: i32 = 6;
+
+/// A message box of that kind; the button chosen.
 #[cfg(windows)]
-fn message_box(title: &str, text: &str) {
+fn message_box(title: &str, text: &str, kind: u32) -> i32 {
     #[link(name = "user32")]
     extern "system" {
         fn MessageBoxW(window: *mut std::ffi::c_void, text: *const u16, title: *const u16, kind: u32) -> i32;
     }
     let wide = |s: &str| s.encode_utf16().chain([0]).collect::<Vec<u16>>();
-    // MB_ICONERROR
-    unsafe { MessageBoxW(std::ptr::null_mut(), wide(text).as_ptr(), wide(title).as_ptr(), 0x10) };
+    unsafe { MessageBoxW(std::ptr::null_mut(), wide(text).as_ptr(), wide(title).as_ptr(), kind) }
 }
 
 #[cfg(not(windows))]
-fn message_box(_title: &str, _text: &str) {}
+fn message_box(_title: &str, _text: &str, _kind: u32) -> i32 {
+    0
+}
 
 pub fn main() {
     if std::env::args().nth(1).is_none() {
         enter_game_folder();
+    }
+    // A texture pack next to the game: asked about (TSSM_PACK_ANSWER=yes or no answers, for tests).
+    match std::env::var("TSSM_PACK_ANSWER") {
+        Ok(answer) => pack::offer(|_| answer == "yes"),
+        Err(_) if std::env::var_os("TSSM_HEADLESS").is_none() => {
+            pack::offer(|text| message_box("The SpongeBob SquarePants Movie", text, MB_YESNO_QUESTION) == IDYES)
+        }
+        Err(_) => {}
     }
     let disc = PathBuf::from(std::env::args().nth(1).unwrap_or_else(|| "disc".into()));
     if std::env::var_os("TSSM_HEADLESS").is_some() {
